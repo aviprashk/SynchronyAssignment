@@ -11,7 +11,7 @@ This project develop using Maven Tool.
 * On the root of pom.xml file execute maven command
       maven package SynchronyAssignment
 * Service should be start using command.
-	   java -jar SynchronyAssignment.jar	       
+      java -jar SynchronyAssignment.jar	       
 
 # REST APIs
 
@@ -38,17 +38,10 @@ This project develop using Maven Tool.
 # Assumptions
 
 * User basic information contains username, password, email, gender, permissions.
-* User registration with user details persist into USER table in H2 database.
-* User Images persist into USERIMAGES table in H2 database.
-* Follow One To Many relationship with User and UserImages tables.
-* When user upload image on IMGUR portal at the same time entry should persist into USERIMAGES table.
-* Upload image user should have Upload Permission.       
-* View User details and Images, User should have View Permissions. 
-* Delete Image, User should have Delete Permissions.
-* Keep record deletehash generated while upload the image on IMGUR which help to delete image.
+* User details persist into USER table and User Images into USERIMAGES in H2 database.
+* Upload, View and Delete events require appropriate Permissions.
+* Deletehash field values recorded as its require to delete image from IMGUR. This value generated while Upload even on IMGUR
 * Permissions validated from User table in Database.
-* Associate all uploaded images by user persist into USERIMAGES table.   
-
 
 # Improvements
 
