@@ -1,153 +1,268 @@
 package com.synchrony.assignment.service.impl;
 
-import java.awt.image.BufferedImage;
-import java.io.BufferedReader;
-import java.io.ByteArrayOutputStream;
-import java.io.File;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
-import java.io.UnsupportedEncodingException;
 import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.net.URLConnection;
-import java.net.URLEncoder;
 import java.util.List;
 import java.util.Optional;
 
-import javax.imageio.ImageIO;
-
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Example;
+import org.springframework.data.domain.ExampleMatcher;
+import org.springframework.data.domain.ExampleMatcher.GenericPropertyMatchers;
+import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
+import org.springframework.web.multipart.MultipartFile;
 
-import com.sun.org.apache.xerces.internal.impl.dv.util.Base64;
 import com.synchrony.assignment.model.User;
+import com.synchrony.assignment.model.UserImages;
+import com.synchrony.assignment.repository.UserImagesRepository;
 import com.synchrony.assignment.repository.UserRepository;
 import com.synchrony.assignment.service.UserService;
+import com.synchrony.assignment.util.UserUtil;
 
-@SuppressWarnings("restriction")
+/**
+ * @Description: This is a UserService implementation class. It access the JPA
+ *               UserRepository API's to perform the CRUD operation on User and
+ *               the Images uploaded or deleted in H2 DB. The Template or
+ *               skeleton defined in the UserService Interface. Any further
+ *               extension we can directly add Java 8 supported default method
+ *               in UserService Interface which avoid the impact on this
+ *               UserService Implementation.
+ * 
+ * @author Aviprash
+ *
+ */
 @Service
 public class UserServiceImpl implements UserService {
 
+	/**
+	 * Autowired UserRepository to perform CRUD operation on User table.
+	 */
 	@Autowired
 	private UserRepository userRepository;
 
+	/**
+	 * Autowired UserImagesRepository to perform CRUD operation on UserImages
+	 * table.
+	 */
+	@Autowired
+	private UserImagesRepository userImagesRepository;
+
+	/**
+	 * Autowired UserUtil to performs Utility functionality.
+	 */
+	@Autowired
+	private UserUtil userUtil;
+
+	/**
+	 * Setter Injection for UserRepository
+	 * 
+	 * @param userRepository
+	 */
 	public void setUserRepository(UserRepository userRepository) {
 		this.userRepository = userRepository;
 	}
 
-	@Override
-	public void registerUser(User user) {
-		userRepository.save(user);
+	/**
+	 * Setter Injection for UserImagesRepository
+	 * 
+	 * @param userImagesRepository
+	 */
+	public void setUserImagesRepository(UserImagesRepository userImagesRepository) {
+		this.userImagesRepository = userImagesRepository;
 	}
 
+	/**
+	 * Registration user service method call. This method check the duplicate
+	 * user entry in H@ DB. If the User is already exists then it returns false
+	 * else returns true for successful registration.
+	 * 
+	 * @param User
+	 */
+	@Override
+	public boolean registerUser(User user) {
+		ExampleMatcher nameMatcher = ExampleMatcher.matching().withMatcher("username",
+				GenericPropertyMatchers.caseSensitive());
+		Example<User> userExample = Example.of(user, nameMatcher);
+		boolean exists = userRepository.exists(userExample);
+		if (!exists) {
+			String password = userUtil.decryptPassword(user);
+			if (!password.isEmpty())
+				user.setPassword(password);
+			userRepository.save(user);
+			return true;
+		}
+		return false;
+	}
+
+	/**
+	 * Persistence of all user images under UserImages table in H2 DB. It takes
+	 * image file as parameter and save the image in byte[] format.
+	 * 
+	 * @param image
+	 */
+	@Override
+	public void persistUserImages(MultipartFile image) {
+		UserImages images = new UserImages();
+		try {
+			images.setImage(image.getBytes());
+			userImagesRepository.save(images);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+
+	/**
+	 * This method call retrieves single User details. It takes User id as
+	 * parameter and find the record in H2 DB and returns to the client.
+	 * 
+	 * @param id
+	 * @return User
+	 */
 	@Override
 	public User retrieveUser(Long id) {
 		Optional<User> optUser = userRepository.findById(id);
 		return optUser.get();
 	}
 
+	/**
+	 * This method call retrieves all User details from DB.
+	 * 
+	 * @return List of Users.
+	 */
 	@Override
 	public List<User> retrieveUsers() {
 		List<User> users = userRepository.findAll();
 		return users;
 	}
-	
-	   public String getImgurContent() throws Exception {
 
-	         String clientID = "152135133aeb077";
-
-	    URL url;
-
-	    url = new URL("https://api.imgur.com/3/image");
-	    HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-
-	    String data = URLEncoder.encode("image", "UTF-8") + "="
-	            + URLEncoder.encode("http://i.imgur.com/FB9OZWQ.jpg", "UTF-8");
-	    conn.setDoOutput(true);
-	    conn.setDoInput(true);
-	    conn.setRequestMethod("POST");
-	    conn.setRequestProperty("Authorization", "Client-ID " + clientID);
-	    conn.setRequestMethod("POST");
-	    conn.setRequestProperty("Content-Type",
-	            "application/x-www-form-urlencoded");
-
-	    conn.connect();
-	    StringBuilder stb = new StringBuilder();
-	    OutputStreamWriter wr = new OutputStreamWriter(conn.getOutputStream());
-	    wr.write(data);
-	    wr.flush();
-
-	    // Get the response
-	    BufferedReader rd = new BufferedReader(
-	            new InputStreamReader(conn.getInputStream()));
-	    String line;
-	    while ((line = rd.readLine()) != null) {
-	        stb.append(line).append("\n");
-	    }
-	    wr.close();
-	    rd.close();
-
-	    System.out.println(stb.toString());
-
-	    return stb.toString();
-	}
-	
-	
-	
-	@SuppressWarnings("restriction")
+	/**
+	 * It retrieve the User basic information and the uploaded Images from
+	 * Database. User details from User table and User Images from UserImages
+	 * table. It takes the User Id as Input to Query to database to get the
+	 * details.
+	 * 
+	 * @param id
+	 * @return User Object.
+	 */
 	@Override
-	public void uploadImage() {
-		String API_KEY = "152135133aeb077";
-		ByteArrayOutputStream baos = new ByteArrayOutputStream();
-		BufferedImage image = null;
-		File file = new File("D:\\Aviprash BackUp\\wallpapers\\ganesh on banna leaf.jpg");
-		URL url = null;
-		try {
-
-			image = ImageIO.read(file);
-			ImageIO.write(image, "jpg", baos);
-
-			url = new URL("https://api.imgur.com/3/image");
-		} catch (MalformedURLException e) {
-			e.printStackTrace();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-		// encodes picture with Base64 and inserts api key
-		String data = "";
-		try {
-			data = URLEncoder.encode("image", "UTF-8") + "="
-					+ URLEncoder.encode(Base64.encode(baos.toByteArray()), "UTF-8");
-			data += "&" + URLEncoder.encode("key", "UTF-8") + "=" + URLEncoder.encode(API_KEY, "UTF-8");
-		} catch (UnsupportedEncodingException e) {
-			e.printStackTrace();
-		}
-		// opens connection and sends data
-		URLConnection conn = null;
-		try {
-			conn = url.openConnection();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-		conn.setDoOutput(true);
-		OutputStreamWriter wr = null;
-		try {
-			wr = new OutputStreamWriter(conn.getOutputStream());
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-		try {
-			wr.write(data);
-			wr.flush();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
+	public User viewUserAndImagesDetails(Long id) {
+		Optional<User> optUser = userRepository.findById(id);
+		return optUser.get();
 	}
 
+	/**
+	 * Checks whether User is exists in Database having required Upload image
+	 * file permissions. It takes User object as Parameter and query to Database
+	 * to find user existence for upload permission.
+	 * 
+	 * @param user
+	 * @return true / false
+	 */
 	@Override
-	public void deleteImage(User user) {
+	public boolean isUserExistsWithUploadPermission(User user) {
+		String uploadPerms = "";
+		ExampleMatcher NAME_MATCHER = ExampleMatcher.matching().withMatcher("username",
+				GenericPropertyMatchers.caseSensitive());
+		Example<User> userExample = Example.of(user, NAME_MATCHER);
+		boolean exists = userRepository.exists(userExample);
+		if (exists)
+			uploadPerms = user.getPermission();
+		return (!uploadPerms.isEmpty() && uploadPerms.equals("Upload") ? true : false);
+	}
 
+	/**
+	 * Checks whether User is exists in Database having required View image file
+	 * permissions. It takes User object as Parameter and query to Database to
+	 * find user existence for View permission.
+	 * 
+	 * @param user
+	 * @return true / false
+	 */
+	@Override
+	public boolean isUserExistsWithViewPermission(User user) {
+		String uploadPerms = "";
+		ExampleMatcher NAME_MATCHER = ExampleMatcher.matching().withMatcher("username",
+				GenericPropertyMatchers.caseSensitive());
+		Example<User> userExample = Example.of(user, NAME_MATCHER);
+		boolean exists = userRepository.exists(userExample);
+		if (exists)
+			uploadPerms = user.getPermission();
+		return (!uploadPerms.isEmpty() && uploadPerms.equals("View") ? true : false);
+	}
+
+	/**
+	 * Checks whether User is exists in Database having required Delete image
+	 * file permissions. It takes User object as Parameter and query to Database
+	 * to find user existence for Delete permission.
+	 * 
+	 * @param user
+	 * @return true / false
+	 */
+	@Override
+	public boolean isUserExistsWithDeletePermission(User user) {
+		String deletePerms = "";
+		ExampleMatcher NAME_MATCHER = ExampleMatcher.matching().withMatcher("username",
+				GenericPropertyMatchers.caseSensitive());
+		Example<User> userExample = Example.of(user, NAME_MATCHER);
+		boolean exists = userRepository.exists(userExample);
+		if (exists)
+			deletePerms = user.getPermission();
+		return (!deletePerms.isEmpty() && deletePerms.equals("Delete") ? true : false);
+	}
+
+	/**
+	 * This API method call uploads the image to IMGUR portal. It takes Image
+	 * file as Input parameter. Before uploading the image file, it first checks
+	 * the Proper Authentication using CLIENT ID generated from IMGUR portal.
+	 * 
+	 * After successfully Authentication and check the required upload
+	 * permission to database thie it upload the Image on IMGUR, it also
+	 * inserted record in UserImages table. One user can upload multiple images.
+	 * User and UserImages are One To Many relationship.
+	 * 
+	 * @param image
+	 *            file
+	 * @return String Acknowledgement.
+	 */
+	@Override
+	public String uploadImage(MultipartFile image) {
+		HttpURLConnection conn = UserUtil.getHttpConnection(IMGUR_CLIENT_ID, IMGUR_IMAGE_URL, "POST");
+		UserUtil.writeToConnection(conn, "image=" + UserUtil.toBase64(UserUtil.convert(image)));
+		return UserUtil.getResponse(conn);
+	}
+
+	/**
+	 * This API method call deletes the image from IMGUR portal. It takes User
+	 * object and delete hash as Input parameter. Before deleting the image
+	 * file, it first checks the Proper Authentication using CLIENT ID generated
+	 * from IMGUR portal.
+	 * 
+	 * After successful IMGUR Authentication and required delete permission to
+	 * User from H2 DB, this it allows user to delete the image using provided
+	 * deletehash string.
+	 * 
+	 * @param user
+	 * @param deleteHash
+	 * @return String Acknowledgement.
+	 */
+	@Override
+	public String deleteImage(User user, String deleteHash) {
+		RestTemplate restTemplate = new RestTemplate();
+		HttpHeaders headers = new HttpHeaders();
+		headers.set("Authorization: Client-ID", IMGUR_CLIENT_ID);
+		String resourceUrl = IMGUR_IMAGE_URL + "/" + deleteHash;
+		ExampleMatcher imagehash_matcher = ExampleMatcher.matching().withMatcher("deleteHash",
+				GenericPropertyMatchers.caseSensitive());
+		Example<UserImages> userImageExample = Example.of(new UserImages(), imagehash_matcher);
+		Optional<UserImages> images = userImagesRepository.findOne(userImageExample);
+		if (images.isPresent()) {
+			userImagesRepository.delete(images.get());
+			restTemplate.delete(resourceUrl, headers);
+		} else {
+			return "Issue with Image deletion from Imgur and UserImages Table! Please investigate";
+		}
+		return "Image deleted successfully from Imgur and UserImages Table";
 	}
 }

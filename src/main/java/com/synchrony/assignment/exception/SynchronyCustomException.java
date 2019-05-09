@@ -4,21 +4,21 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.ResponseStatus;
 
 @ResponseStatus(HttpStatus.NOT_FOUND)
-public class ResourceNotFoundException extends RuntimeException {
+public class SynchronyCustomException extends RuntimeException {
 	/**
 	 * 
 	 */
 	private static final long serialVersionUID = 1L;
 
-	public ResourceNotFoundException() {
+	public SynchronyCustomException() {
 		super();
 	}
 
-	public ResourceNotFoundException(String message) {
+	public SynchronyCustomException(String message) {
 		super(message);
 	}
 
-	public ResourceNotFoundException(String message, Throwable cause) {
+	public SynchronyCustomException(String message, Throwable cause) {
 		super(message, cause);
 	}
 }
