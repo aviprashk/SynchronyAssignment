@@ -4,6 +4,8 @@ import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Example;
@@ -35,6 +37,8 @@ import com.synchrony.assignment.util.UserUtil;
  */
 @Service
 public class UserServiceImpl implements UserService {
+
+	private Lock lock;
 
 	/**
 	 * Autowired UserRepository to perform CRUD operation on User table.
@@ -82,16 +86,22 @@ public class UserServiceImpl implements UserService {
 	 */
 	@Override
 	public boolean registerUser(User user) {
-		ExampleMatcher nameMatcher = ExampleMatcher.matching().withMatcher("username",
-				GenericPropertyMatchers.caseSensitive());
-		Example<User> userExample = Example.of(user, nameMatcher);
-		boolean exists = userRepository.exists(userExample);
-		if (!exists) {
-			String password = userUtil.decryptPassword(user);
-			if (!password.isEmpty())
-				user.setPassword(password);
-			userRepository.save(user);
-			return true;
+		lock = new ReentrantLock();
+		try {
+			lock.lock();
+			ExampleMatcher nameMatcher = ExampleMatcher.matching().withMatcher("username",
+					GenericPropertyMatchers.caseSensitive());
+			Example<User> userExample = Example.of(user, nameMatcher);
+			boolean exists = userRepository.exists(userExample);
+			if (!exists) {
+				String password = userUtil.decryptPassword(user);
+				if (!password.isEmpty())
+					user.setPassword(password);
+				userRepository.save(user);
+				return true;
+			}
+		} finally {
+			lock.unlock();
 		}
 		return false;
 	}
@@ -105,11 +115,15 @@ public class UserServiceImpl implements UserService {
 	@Override
 	public void persistUserImages(MultipartFile image) {
 		UserImages images = new UserImages();
+		lock = new ReentrantLock();
 		try {
+			lock.lock();
 			images.setImage(image.getBytes());
 			userImagesRepository.save(images);
 		} catch (IOException e) {
 			e.printStackTrace();
+		}finally{
+			lock.unlock();
 		}
 	}
 
