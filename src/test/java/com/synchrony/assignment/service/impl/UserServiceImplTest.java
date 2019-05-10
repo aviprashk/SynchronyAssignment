@@ -6,6 +6,7 @@ package com.synchrony.assignment.service.impl;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertNotNull;
 import static org.mockito.Mockito.when;
+import org.junit.Ignore;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -31,6 +32,7 @@ import com.synchrony.assignment.util.UserUtil;
  * @author Aviprash
  *
  */
+@Ignore
 @RunWith(MockitoJUnitRunner.class)
 public class UserServiceImplTest {
 

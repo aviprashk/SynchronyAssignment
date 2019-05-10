@@ -13,27 +13,45 @@ This project develop using Maven Tool.
 * Service should be start using command.
       java -jar SynchronyAssignment.jar	       
 
+# H2 Database
+
+* H2 DB Configuration
+
+spring.datasource.url=jdbc:h2:mem:testdb  
+spring.datasource.driverClassName=org.h2.Driver  
+spring.datasource.username=sa  
+spring.datasource.password=  
+spring.h2.console.enabled=true
+spring.jpa.hibernate.ddl-auto=update
+
+* H2 Console URL
+
+  http://localhost:8080/h2-console/
+  
+
 # REST APIs
 
 * User Registration POST call
 
-  /synchrony/registration
+  http://localhost:8080/synchrony/registration
   
 * View Specific User details GET call 
 
-  /synchrony/viewuserimages/{userId}
+  http://localhost:8080/synchrony/viewuserimages/{userId}
   
 * Fetch All users GET call
 
-  /synchrony/users 
+  http://localhost:8080/synchrony/users 
 
 * Upload Image POST call
 
-  /synchrony/upload
+  http://localhost:8080/synchrony/upload
  
 * Delete Image from IMGUR and Dabase based on delete Hash generated while Image upload DELETE call
 
-  /synchrony/delete/{deletehash}
+  http://localhost:8080/synchrony/delete/{deletehash}
+  
+# Note: {localhost} use for Testing using Postman.
   
 # Assumptions
 
